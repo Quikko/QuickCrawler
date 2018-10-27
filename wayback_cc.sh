@@ -10,11 +10,8 @@ wayback(){
             echo "[!] Usage: ./wayback.sh [subdomain-list][domain]"
         exit 1;
     fi
-    echo -e "[+] Reading the subdomains line per line, given to waybackurls tool"
-    while IFS='' read -r line || [[ -n "$line" ]]; do
-        ./waybackurls "$line" | sort | uniq >> wayback_all_urls.txt
-    done < "$1" 
-    echo -e "[+] Wayback done"
+    echo -e "[+] Reading the subdomains and throwing them against waybackurl tool"
+    cat "$1" ! ./waybackurls > ./wayback_all_urls.txt
 }
 #Make Binary from cc.py so we do not edit the path whole time.
 ##Work-Flow:
@@ -45,12 +42,13 @@ js_analyzer(){
             exit 1;
         fi
     echo -e "[+] Fetching all URLs with javascript files from wayback results"
+        cat wayback_all_urls.txt | grep -E "\.js$" > ./all_js_files-tmp.txt
         while IFS='' read -r line || [[ -n "$line" ]]; do
-            #Fetch JS files.
-            if echo -e "\t[-] Found: $line" | grep "\.js"; then
-                curl "$line" -w 'Status:%{http_code}\t Size:%{size_download}\t %{url_effective}\n' -o /dev/null -sk
+            command=`curl -sL -w "%{http_code}" "$line" -o /dev/null`
+            if [ $command == "200" ]; then
+                echo "$line" >> legit-Javascript-Files.txt
             fi
-        done < wayback_all_urls.txt
+        done < all_js_files-tmp.txt
 }
 
 wayback "$1" "$2"
